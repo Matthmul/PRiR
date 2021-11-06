@@ -6,6 +6,10 @@
 #define MPIDATAPROCESSOR_H_
 
 #include "DataProcessor.h"
+#include "Alloc.h"
+#include <iostream>
+#include <math.h>
+#include "mpi.h" 
 
 class MPIDataProcessor : public DataProcessor {
 private:
@@ -15,16 +19,24 @@ private:
 	static const int COL = 1;
 
 	int tabSize[TAB_ARRAY_SIZE];
-
+	int rank;
+    int procNum;
+    MPI_Status status;
+	
 	void createDataPortion( int row, int col, double *buffer );
-	void calcDataToDivine(int procNum);
+	void calcTabSize(int maxProcNum, int procNum) ;
 	double **tableAlloc( int *tabSize );
+	inline int getMargin()
+	{
+		return (margin * 2);
+	}
 
 protected:
 	void singleExecution();
 	void collectData();
 	void shareData();
 public:
+	MPIDataProcessor();
 	double** getResult() {
 		return data;
 	}
