@@ -80,65 +80,8 @@ void MPIDataProcessor::singleExecution()
 	data = nextData;
 	nextData = tmp;
 
-	if (rank != procNum - 1)
-	{
-		for (int i = tabSize[ROW] - margin; i < tabSize[ROW]; ++i)
-		{
-			MPI_Recv(*(data + i), dataPortionSize, MPI_FLOAT, rank + 1, TAG, MPI_COMM_WORLD, &status);
-		}
-	}
-	else
-	{
-		for (int i = tabSize[ROW] - margin; i < tabSize[ROW]; ++i)
-		{
-			MPI_Recv(*(data + i), dataPortionSize, MPI_FLOAT, MAIN_PROC_ID, TAG, MPI_COMM_WORLD, &status);
-		}
-	}
-	if (rank != 1)
-	{
-		for (int i = 0; i < margin; ++i) 
-		{
-			MPI_Recv(*(data + i), dataPortionSize, MPI_FLOAT,  rank - 1, TAG, MPI_COMM_WORLD, &status);
-		}
-	}
-
-	if (rank != MAIN_PROC_ID)
-	{
-		if (rank != procNum - 1)
-		{
-			for (int i = tabSize[ROW] - getMargin(); i < tabSize[ROW] - margin; ++i) 
-			{
-				MPI_Send(*(data + i), dataPortionSize, MPI_FLOAT, rank + 1, TAG, MPI_COMM_WORLD);
-			}
-		}
-		else
-		{
-			for (int i = tabSize[ROW] - getMargin(); i < tabSize[ROW] - margin; ++i) 
-			{
-				MPI_Send(*(data + i), dataPortionSize, MPI_FLOAT, MAIN_PROC_ID, TAG, MPI_COMM_WORLD);
-			}
-		}
-	}
-	if (rank != 1)
-	{
-		if (rank != MAIN_PROC_ID)
-		{
-			for (int i = margin; i < getMargin(); ++i) 
-			{
-				MPI_Send(*(data + i), dataPortionSize, MPI_FLOAT, rank - 1, TAG, MPI_COMM_WORLD);
-			}
-		}
-		else
-		{
-			for (int i = margin; i < getMargin(); ++i) 
-			{
-				MPI_Send(*(data + i), dataPortionSize, MPI_FLOAT, procNum - 1, TAG, MPI_COMM_WORLD);
-			}
-		}
-	}
-
-	// collectData();
-	// shareData();
+	collectData();
+	shareData();
 }
 
 void MPIDataProcessor::collectData()
@@ -167,14 +110,6 @@ void MPIDataProcessor::collectData()
 			}
 			tmp += tabSize[ROW] - getMargin();
         }
-
-		// std::cout << "---------------------------------- " << rank << std::endl;
-		// for (int i = 0; i < dataSize; ++i)
-		// {
-		// 	for (int j = 0; j < dataSize; ++j)
-		// 		std::cout << " " << nextData[i][j] << "-" << rank;
-		// 	std::cout << std::endl;
-		// }
 
 		calcTabSize(procNum, MAIN_PROC_ID);
 		for (int i = margin; i < tabSize[ROW]; ++i)
