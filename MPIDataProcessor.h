@@ -26,6 +26,11 @@ private:
 	void createDataPortion( int row, int col, double *buffer );
 	void calcTabSize(int maxProcNum, int procNum) ;
 	double **tableAlloc( int *tabSize );
+	void syncData();
+	void sendTopMargin( int dest );
+	void sendDownMargin( int dest );
+	void recvTopMargin( int dest );
+	void recvDownMargin( int dest );
 	inline int getMargin()
 	{
 		return (margin * 2);

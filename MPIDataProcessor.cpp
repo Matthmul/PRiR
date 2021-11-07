@@ -26,7 +26,7 @@ void MPIDataProcessor::shareData()
 	}
     else 
     {
-        for (auto num = 1; num < procNum; ++num)
+        for (auto num = procNum - 1; num > 0; --num)
         {
 			calcTabSize(procNum, num);
 			MPI_Send(&tabSize, TAB_ARRAY_SIZE, MPI_INT, num, TAG, MPI_COMM_WORLD);
@@ -69,6 +69,8 @@ double **MPIDataProcessor::tableAlloc( int *tabSize )
 
 void MPIDataProcessor::singleExecution() 
 {
+	syncData();
+
 	double *buffer = new double[dataPortionSize];
 	for (int row = margin; row < tabSize[ROW] - margin; ++row)
 		for (int col = margin; col < tabSize[COL] - margin; ++col) {
@@ -79,73 +81,101 @@ void MPIDataProcessor::singleExecution()
     double **tmp = data;
 	data = nextData;
 	nextData = tmp;
+}
 
-	// if (rank != procNum - 1)
-	// {
-	// 	for (int i = tabSize[ROW] - margin; i < tabSize[ROW]; ++i)
-	// 	{
-	// 		MPI_Recv(*(data + i), dataPortionSize, MPI_FLOAT, rank + 1, TAG, MPI_COMM_WORLD, &status);
-	// 	}
-	// }
-	// else
-	// {
-	// 	for (int i = tabSize[ROW] - margin; i < tabSize[ROW]; ++i)
-	// 	{
-	// 		MPI_Recv(*(data + i), dataPortionSize, MPI_FLOAT, MAIN_PROC_ID, TAG, MPI_COMM_WORLD, &status);
-	// 	}
-	// }
-	// if (rank != 1)
-	// {
-	// 	for (int i = 0; i < margin; ++i) 
-	// 	{
-	// 		MPI_Recv(*(data + i), dataPortionSize, MPI_FLOAT,  rank - 1, TAG, MPI_COMM_WORLD, &status);
-	// 	}
-	// }
+void MPIDataProcessor::sendTopMargin( int dest )
+{
+	if (rank != procNum - 1)
+	{
+		for (int i = margin; i < getMargin(); ++i) 
+		{
+			MPI_Send(*(data + i), tabSize[COL] * 2, MPI_FLOAT, dest, TAG, MPI_COMM_WORLD);
+		}
+	}
+}
 
-	// if (rank != MAIN_PROC_ID)
-	// {
-	// 	if (rank != procNum - 1)
-	// 	{
-	// 		for (int i = tabSize[ROW] - getMargin(); i < tabSize[ROW] - margin; ++i) 
-	// 		{
-	// 			MPI_Send(*(data + i), dataPortionSize, MPI_FLOAT, rank + 1, TAG, MPI_COMM_WORLD);
-	// 		}
-	// 	}
-	// 	else
-	// 	{
-	// 		for (int i = tabSize[ROW] - getMargin(); i < tabSize[ROW] - margin; ++i) 
-	// 		{
-	// 			MPI_Send(*(data + i), dataPortionSize, MPI_FLOAT, MAIN_PROC_ID, TAG, MPI_COMM_WORLD);
-	// 		}
-	// 	}
-	// }
-	// if (rank != 1)
-	// {
-	// 	if (rank != MAIN_PROC_ID)
-	// 	{
-	// 		for (int i = margin; i < getMargin(); ++i) 
-	// 		{
-	// 			MPI_Send(*(data + i), dataPortionSize, MPI_FLOAT, rank - 1, TAG, MPI_COMM_WORLD);
-	// 		}
-	// 	}
-	// 	else
-	// 	{
-	// 		for (int i = margin; i < getMargin(); ++i) 
-	// 		{
-	// 			MPI_Send(*(data + i), dataPortionSize, MPI_FLOAT, procNum - 1, TAG, MPI_COMM_WORLD);
-	// 		}
-	// 	}
-	// }
+void MPIDataProcessor::sendDownMargin( int dest )
+{
+	if (rank != MAIN_PROC_ID)
+	{
+		for (int i = tabSize[ROW] - getMargin(); i < tabSize[ROW] - margin; ++i) 
+		{
+			MPI_Send(*(data + i), tabSize[COL] * 2, MPI_FLOAT, dest, TAG, MPI_COMM_WORLD);
+		}
+	}
+}
 
-	collectData();
-	shareData();
+void MPIDataProcessor::recvTopMargin( int dest )
+{
+	if (rank != procNum - 1)
+	{
+		for (int i = 0; i < margin; ++i) 
+		{
+			MPI_Recv(*(data + i), tabSize[COL] * 2, MPI_FLOAT,  dest, TAG, MPI_COMM_WORLD, &status);
+		}
+	}
+}
+
+void MPIDataProcessor::recvDownMargin( int dest )
+{
+	if (rank != MAIN_PROC_ID)
+	{
+		for (int i = tabSize[ROW] - margin; i < tabSize[ROW]; ++i)
+		{
+			MPI_Recv(*(data + i), tabSize[COL] * 2, MPI_FLOAT, dest, TAG, MPI_COMM_WORLD, &status);
+		}
+	}
+}
+
+void MPIDataProcessor::syncData()
+{
+	switch (rank)
+	{
+	case MAIN_PROC_ID:
+		recvTopMargin(rank + 1);
+		sendTopMargin(rank + 1);
+		break;
+	default:
+		if (rank == procNum-1)
+		{
+			if (procNum % 2 == 0)
+			{
+				sendDownMargin(rank - 1);
+				recvDownMargin(rank - 1);
+			}
+			else
+			{
+				recvDownMargin(rank - 1);
+				sendDownMargin(rank - 1);
+			}
+		}
+		else
+		{
+			switch(rank%2)
+			{
+			case 0:
+				recvTopMargin(rank + 1);
+				recvDownMargin(rank - 1);
+				sendTopMargin(rank + 1);
+				sendDownMargin(rank - 1);
+				break;
+			case 1:
+				sendTopMargin(rank + 1);
+				sendDownMargin(rank - 1);
+				recvTopMargin(rank + 1);
+				recvDownMargin(rank - 1);
+				break;
+			}
+		}
+		break;
+	}
 }
 
 void MPIDataProcessor::collectData()
 {
 	if (rank != MAIN_PROC_ID) 
     {
-		int i = (rank == 1) ? 0 : margin;
+		int i = (rank == (procNum - 1)) ? 0 : margin;
 		for (; i < tabSize[ROW] - margin; ++i) 
 		{
 			MPI_Send(*(data + i), tabSize[COL] * 2, MPI_FLOAT, MAIN_PROC_ID, TAG, MPI_COMM_WORLD);
@@ -157,10 +187,10 @@ void MPIDataProcessor::collectData()
 		double **nextData = tableAlloc(tmpTabSize);
 
 		double **tmp = nextData;
-        for (auto num = 1; num < procNum; ++num)
+        for (auto num = procNum - 1; num > 0; --num)
         {
 			calcTabSize(procNum, num);
-			int i = (num == 1) ? 0 : margin;
+			int i = (num == (procNum - 1)) ? 0 : margin;
 			for (; i < tabSize[ROW] - margin; ++i) 
 			{
             	MPI_Recv(*(tmp + i), tabSize[COL] * 2, MPI_FLOAT, num, TAG, MPI_COMM_WORLD, &status);
