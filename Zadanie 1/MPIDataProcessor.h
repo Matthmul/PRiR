@@ -7,8 +7,6 @@
 
 #include "DataProcessor.h"
 #include "Alloc.h"
-#include <iostream>
-#include <math.h>
 #include "mpi.h" 
 
 class MPIDataProcessor : public DataProcessor {
@@ -40,8 +38,10 @@ protected:
 	void singleExecution();
 	void collectData();
 	void shareData();
+	
 public:
 	MPIDataProcessor();
+	~MPIDataProcessor() = default;
 	double** getResult() {
 		return data;
 	}
