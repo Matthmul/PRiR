@@ -20,7 +20,7 @@ public interface RAIDInterface {
      * przed innymi metodami tego samego interfejsu. Kolejnosc dodawanych dyskow
      * jest wiazaca. Ostatni z dodanych dyskow przeznaczony jest na dane nadmiarowe.
      *
-     * @param disk dysk do uĹźycia do budowy macierzy
+     * @param disk dysk do uzycia do budowy macierzy
      */
     public void addDisk(DiskInterface disk);
 
