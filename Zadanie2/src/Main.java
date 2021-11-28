@@ -11,14 +11,14 @@ public class Main {
         }
 
         public void run() {
-            for (int i = 1; i < 100000000; ++i) {
+            for (int i = 1; i < 10000000; ++i) {
 //                System.out.println("pr id " + id + " " + raid.read(100 * id));
-                raid.read(100 * id);
-                raid.write(10 * id, 10 + id + i);
-                int val = raid.read(10 * id);
-                if (val != 10 + id + i) {
-                    System.out.println("In val " + val + " " + (10 + id + i) + " " + id);
-                }
+                raid.read(100000000 * id);
+//                raid.write(10 * id, 10 + id + i);
+                int val = raid.read(100000000 * id);
+//                if (val != 10 + id + i && !raid.isShutdown) {
+//                    System.out.println("In val " + val + " " + (10 + id + i) + " " + id);
+//                }
 //                System.out.println("po id " + id + " " + raid.read(100 * id));
 //                System.out.println("---");
 //                try {
@@ -88,7 +88,7 @@ public class Main {
         raid.replaceDisk(newD);
         System.out.println(raid.getState());
         System.out.println("------------------------");
-        for (int a = 0; a < 2; a++) {
+        for (int a = 0; a < 3; a++) {
             for (int i = 0; i < jobNum; i++) {
                 runners[i] = new MyRun(i);
                 threads[i] = new Thread(runners[i]);
@@ -108,10 +108,11 @@ public class Main {
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
-//            if (raid.getBackup(0) != 105) {
+            if (raid.getBackup(0) != 1000019) {
                 System.out.println("Back " + raid.getBackup(0));
-//            }
+            }
             d2.destroy();
         }
+        raid.shutdown();
     }
 }

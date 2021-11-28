@@ -3,13 +3,13 @@ import java.util.concurrent.locks.ReentrantLock;
 
 public class RAID implements RAIDInterface {
     private RAIDState state;
-    private ArrayList<DiskInterface> disks = new ArrayList<DiskInterface>();
+    public ArrayList<DiskInterface> disks = new ArrayList<DiskInterface>();
     private ArrayList<Boolean> broken = new ArrayList<Boolean>();
     private ArrayList<ReentrantLock> disksLock = new ArrayList<ReentrantLock>();
     private DiskInterface backupDisk;
     private int matrixSize;
     private int diskSize;
-    private boolean isShutdown;
+    public boolean isShutdown;
 
     public RAID() {
         state = RAIDState.UNKNOWN;
@@ -302,5 +302,18 @@ public class RAID implements RAIDInterface {
     public void shutdown() {
         state = RAIDState.UNKNOWN;
         isShutdown = true;
+    }
+
+    public int getBackup(int sector) {
+        int val = 0;
+        try {
+            disksLock.get(disks.size()).lock();
+
+            val = backupDisk.read(sector);
+        } catch (DiskInterface.DiskError ignored) {
+        } finally {
+            disksLock.get(disks.size()).unlock();
+        }
+        return val;
     }
 }

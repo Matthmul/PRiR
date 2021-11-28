@@ -1,2 +1,6 @@
-*.out
-.vscode
+# Default ignored files
+**/.idea/**
+**.iml
+**/out
+**.out
+**/.vscode
