@@ -1,15 +1,15 @@
+import java.lang.reflect.Array;
 import java.net.MalformedURLException;
 import java.rmi.*;
-import java.util.Arrays;
-import java.util.LinkedHashMap;
-import java.util.LinkedList;
-import java.util.Map;
+import java.util.*;
 import java.rmi.RemoteException;
 import java.util.concurrent.*;
 
 public class Start implements PolygonalChain {
     private Map<String, LinkedList<Position2D>> lines = new LinkedHashMap<>();
+    private Map<String, LinkedList<Position2D>> leftPoints = new LinkedHashMap<>();
     private Map<String, Integer> linesLength = new LinkedHashMap<>();
+    private Map<String, Object> syncObj = new LinkedHashMap<>();
     private Integer taskLimit;
     private PolygonalChainProcessor service;
     private ExecutorService executorService;
@@ -29,7 +29,6 @@ public class Start implements PolygonalChain {
         super();
         service = null;
         taskLimit = null;
-        executorService = Executors.newFixedThreadPool(2, new DaemonThreadFactory());
     }
 
     private class LineTask implements Callable<Boolean> {
@@ -42,23 +41,21 @@ public class Start implements PolygonalChain {
         }
 
         @Override
-        public Boolean call() throws RemoteException {
-//            int result = service.process(name, lineList);
-            int result = 1000 * lineList.size();
-            synchronized (sync) {
+        public Boolean call() {
+            int result = 0;
+            try {
+                result = service.process(name, lineList);
+            } catch (RemoteException e) {
+                e.printStackTrace();
+                return false;
+            }
+            synchronized (syncObj.get(name)) {
                 if (lines.get(name).size() > lineList.size()) {
                     return true;
                 }
                 linesLength.replace(name, result);
             }
-            System.out.println(name);
-            System.out.println(Arrays.toString(lines.get(name).toArray()));
-            System.out.println(Arrays.toString(lineList.toArray()));
-            try {
-                Thread.sleep(10000);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
+
             return true;
         }
     }
@@ -69,25 +66,17 @@ public class Start implements PolygonalChain {
             return;
         }
 
-        Future<Boolean> future;
         synchronized (sync) {
             LinkedList<Position2D> lineList = new LinkedList<>();
             lineList.add(firstPoint);
             lineList.add(lastPoint);
             lines.put(name, lineList);
             linesLength.put(name, null);
-            try {
-                Thread.sleep(100);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-            future = executorService.submit(new LineTask(name, lineList));
-        }
-        try {
-            future.get();
-        } catch (ExecutionException ex) {
-            throw (RemoteException) ex.getCause();
-        } catch (InterruptedException ignored) {
+            LinkedList<Position2D> pointList = new LinkedList<>();
+            pointList.add(firstPoint);
+            pointList.add(lastPoint);
+            leftPoints.put(name, pointList);
+            syncObj.put(name, new Object());
         }
     }
 
@@ -97,40 +86,51 @@ public class Start implements PolygonalChain {
         if (executorService == null) {
             return;
         }
-        if (!linesLength.containsKey(name)) {
+        if (!lines.containsKey(name)) {
             return;
         }
 
-        Future<Boolean> future;
-        synchronized (sync) {
+        Future<Boolean> future = null;
+        synchronized (syncObj.get(name)) {
             LinkedList<Position2D> lineList = lines.get(name);
-            int id = 0;
+            int id = 1;
             for (; id < lineList.size() - 1; ++id) {
-                if (lineList.get(id) == firstPoint) {
+                if (lineList.get(id - 1).equals(firstPoint)) {
                     break;
                 }
             }
-            if (lineList.getLast() != lastPoint) {
+            if (!lineList.getLast().equals(lastPoint)) {
                 lines.get(name).add(id, lastPoint);
             }
             linesLength.replace(name, null);
 
-            future = executorService.submit(new LineTask(name, lineList));
-        }
-        try {
-            future.get();
-        } catch (ExecutionException ex) {
-            throw (RemoteException) ex.getCause();
-        } catch (InterruptedException ignored) {
+            if (firstPoint.equals(lineList.get(id - 1))) {
+                leftPoints.get(name).remove(lineList.get(id - 1));
+            } else {
+                leftPoints.get(name).add(id - 1, firstPoint);
+            }
+            if (lastPoint.equals(lineList.get(id))) {
+                leftPoints.get(name).remove(lineList.get(id));
+            } else {
+                leftPoints.get(name).add(id, lastPoint);
+            }
+
+            if (leftPoints.get(name).isEmpty()) {
+                future = executorService.submit(new LineTask(name, lineList));
+            }
         }
     }
 
     @Override
     public Integer getResult(String name) throws RemoteException {
-        synchronized (sync) {
-            if (!linesLength.containsKey(name)) {
-                return null;
-            }
+        if (executorService == null) {
+            return null;
+        }
+        if (!lines.containsKey(name)) {
+            return null;
+        }
+
+        synchronized (syncObj.get(name)) {
             return linesLength.get(name);
         }
     }
@@ -138,7 +138,7 @@ public class Start implements PolygonalChain {
     @Override
     public void setPolygonalChainProcessorName(String uri) throws RemoteException {
         try {
-            service = (PolygonalChainProcessor) Naming.lookup(uri);
+            service = (PolygonalChainProcessor) Naming.lookup(uri + "/POLYGONAL_CHAIN");
         } catch (NotBoundException | MalformedURLException ignored) {
         }
         taskLimit = service.getConcurrentTasksLimit();

@@ -14,11 +14,22 @@ public class Main {
 
         public void run() {
             try {
-                start.newPolygonalChain(id.toString(), new Position2D(1, 2), new Position2D(1, 3));
-                start.addLineSegment(id.toString(), new Position2D(1, 2), new Position2D(1, 4));
+                start.newPolygonalChain(id.toString(), new Position2D(id, 2), new Position2D(id, 3));
+                start.addLineSegment(id.toString(), new Position2D(id, 2), new Position2D(id+1, 4));
+                start.addLineSegment(id.toString(), new Position2D(id+1, 4), new Position2D(id, 4));
+                start.addLineSegment(id.toString(), new Position2D(id, 4), new Position2D(id, 3));
+//                start.addLineSegment("0", new Position2D(10 - id, 2), new Position2D(10 - id - 1, 2));
 
-                System.out.println(start.getResult(id.toString()));
-
+//                System.out.println(id.toString() + " " + (10 - id) + " ");
+                System.out.println(id.toString() + " " + start.getResult(id.toString()));
+                while (start.getResult(id.toString()) == null) {
+                    try {
+                        Thread.sleep(100);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+                System.out.println(id.toString() + " " + start.getResult(id.toString()));
             } catch (RemoteException e) {
                 e.printStackTrace();
             }
@@ -39,13 +50,14 @@ public class Main {
 //            } catch (InterruptedException e) {
 //                e.printStackTrace();
 //            }
-
-            int jobNum = 4;
+            start.setPolygonalChainProcessorName("//127.0.0.1:1099");
+            int jobNum = 8;
+//            start.newPolygonalChain("0", new Position2D(10, 2), new Position2D(10 - jobNum, 2));
             Runnable[] runners = new Runnable[jobNum];
             Thread[] threads = new Thread[jobNum];
             for (int a = 0; a < 1; a++) {
                 for (int i = 0; i < jobNum; i++) {
-                    runners[i] = new MyRun(start, (i%3));
+                    runners[i] = new MyRun(start, (i));
                     threads[i] = new Thread(runners[i]);
                 }
                 for (int i = 0; i < jobNum; i++) {
