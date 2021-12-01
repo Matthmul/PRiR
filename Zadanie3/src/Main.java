@@ -14,15 +14,17 @@ public class Main {
 
         public void run() {
             try {
-                start.newPolygonalChain(id.toString(), new Position2D(id, 2), new Position2D(id, 3));
-                start.addLineSegment(id.toString(), new Position2D(id, 2), new Position2D(id+1, 4));
-                start.addLineSegment(id.toString(), new Position2D(id+1, 4), new Position2D(id, 4));
-                start.addLineSegment(id.toString(), new Position2D(id, 4), new Position2D(id, 3));
+//                start.newPolygonalChain(id.toString(), new Position2D(id, 2), new Position2D(id, 3));
+//                start.addLineSegment(id.toString(), new Position2D(id, 2), new Position2D(id + 1, 4));
+//                start.addLineSegment(id.toString(), new Position2D(id + 1, 4), new Position2D(id, 4));
+//                start.addLineSegment(id.toString(), new Position2D(id, 4), new Position2D(id, 3));
 //                start.addLineSegment("0", new Position2D(10 - id, 2), new Position2D(10 - id - 1, 2));
+                start.addLineSegment("0", new Position2D(10 - id - 1, 2), new Position2D(10 - id, 2));
 
-//                System.out.println(id.toString() + " " + (10 - id) + " ");
-                System.out.println(id.toString() + " " + start.getResult(id.toString()));
-                while (start.getResult(id.toString()) == null) {
+                System.out.println(id.toString() + " " + (10 - id) + " ");
+//                System.out.println(id.toString() + " " + start.getResult(id.toString()));
+//                while (start.getResult(id.toString()) == null) {
+                while (start.getResult("0") == null) {
                     try {
                         Thread.sleep(100);
                     } catch (InterruptedException e) {
@@ -53,6 +55,7 @@ public class Main {
             start.setPolygonalChainProcessorName("//127.0.0.1:1099");
             int jobNum = 8;
 //            start.newPolygonalChain("0", new Position2D(10, 2), new Position2D(10 - jobNum, 2));
+            start.newPolygonalChain("0", new Position2D(10 - jobNum, 2), new Position2D(10, 2));
             Runnable[] runners = new Runnable[jobNum];
             Thread[] threads = new Thread[jobNum];
             for (int a = 0; a < 1; a++) {
