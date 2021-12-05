@@ -10,12 +10,13 @@
 
 #include "Life.h"
 
-class LifeSequentialImplementation: public Life {
+class LifeSequentialImplementation : public Life
+{
 public:
 	LifeSequentialImplementation();
 	double avgNumerOfLiveNeighboursOfLiveCell();
 	int maxSumOfNeighboursAge();
-	int* numberOfNeighboursStatistics();
+	int *numberOfNeighboursStatistics();
 	void oneStep();
 };
 

@@ -1,22 +1,26 @@
-/*
- * LifeParallelImplementation.h
- *
- *  Created on: 5 lis 2021
- *      Author: oramus
- */
-
 #ifndef LIFEPARALLELIMPLEMENTATION_H_
 #define LIFEPARALLELIMPLEMENTATION_H_
 
-#include"Life.h"
+#include "Life.h"
+#include <stdlib.h>
+#include <time.h>
+#include <omp.h>
+#include <iostream>
 
-class LifeParallelImplementation : public Life {
+class LifeParallelImplementation : public Life
+{
 public:
 	LifeParallelImplementation();
 	double avgNumerOfLiveNeighboursOfLiveCell();
 	int maxSumOfNeighboursAge();
-	int* numberOfNeighboursStatistics();
+	int *numberOfNeighboursStatistics();
 	void oneStep();
+
+private:
+static const int MAX_THREAD_NUM = 6;
+
+int seed [MAX_THREAD_NUM];
+drand48_data buffer [MAX_THREAD_NUM];
 };
 
 #endif /* LIFEPARALLELIMPLEMENTATION_H_ */

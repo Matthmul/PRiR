@@ -8,7 +8,7 @@
 #ifndef RANDOMRULES_H_
 #define RANDOMRULES_H_
 
-#include"Rules.h"
+#include "Rules.h"
 
 class RandomRules : public Rules {
 public:
