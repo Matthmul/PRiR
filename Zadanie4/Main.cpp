@@ -12,6 +12,7 @@
 #include "LifeParallelImplementation.h"
 #include <iostream>
 #include <unistd.h>
+#include <chrono> // for high_resolution_clock
 
 using namespace std;
 
@@ -43,8 +44,8 @@ void glider(Life *l, int col, int row)
 
 int main(int argc, char **argv)
 {
-
-	const int SIZE = 800;
+	const int SIZE = 10000;
+	const int N = 1;
 
 	// Life *l = new LifeSequentialImplementation();
 	Life *l = new LifeParallelImplementation();
@@ -61,37 +62,60 @@ int main(int argc, char **argv)
 
 	int *stat;
 	// while (true) {
-	for (int i = 0; i < 800; ++i)
+	auto start = std::chrono::high_resolution_clock::now();
+	for (int i = 0; i < N; ++i)
 	{
 		l->oneStep();
+		l->avgNumerOfLiveNeighboursOfLiveCell();
+		l->maxSumOfNeighboursAge();
+		l->numberOfNeighboursStatistics();
+
 		// showTable(l->getCurrentState(), SIZE);
 		// cout << l->avgNumerOfLiveNeighboursOfLiveCell() << ", " << l->maxSumOfNeighboursAge() << endl;
-		// l->avgNumerOfLiveNeighboursOfLiveCell();
-		// l->maxSumOfNeighboursAge();
 		// stat = l->numberOfNeighboursStatistics();
 		// showVector(stat, 9);
 		// delete[] stat;
 		// usleep(250000);
 	}
+	auto finish = std::chrono::high_resolution_clock::now();
+	std::chrono::duration<double> elapsed = finish - start;
+	std::cout << "Elapsed time: " << elapsed.count() << " s\n";
 
-	// Life *ll = new LifeSequentialImplementation(); // dla porownania
-	// Rules *rr = new RandomRules();
+	Life *ll = new LifeSequentialImplementation(); // dla porownania
+	Rules *rr = new RandomRules();
 
-	// ll->setRules(rr);
-	// ll->setSize(SIZE);
+	ll->setRules(rr);
+	ll->setSize(SIZE);
+	glider(ll, 5, 5);
+	glider(ll, 10, 5);
+	glider(ll, 10, 10);
+	glider(ll, 5, 10);
 	// glider(ll, 1, 1);
 
 	// int *statt;
-	// for (int i = 0; i < 2; ++i)
-	// {
-	// 	ll->oneStep();
-	// 	showTable(ll->getCurrentState(), SIZE);
-	// 	cout << ll->avgNumerOfLiveNeighboursOfLiveCell() << ", " << ll->maxSumOfNeighboursAge() << endl;
-	// 	statt = ll->numberOfNeighboursStatistics();
-	// 	showVector(statt, 9);
-	// 	delete[] statt;
-	// 	usleep(250000);
-	// }
+	auto start2 = std::chrono::high_resolution_clock::now();
+	for (int i = 0; i < N; ++i)
+	{
+		ll->oneStep();
+		ll->avgNumerOfLiveNeighboursOfLiveCell();
+		ll->maxSumOfNeighboursAge();
+		ll->numberOfNeighboursStatistics();
+
+		// 	showTable(ll->getCurrentState(), SIZE);
+		// 	cout << ll->avgNumerOfLiveNeighboursOfLiveCell() << ", " << ll->maxSumOfNeighboursAge() << endl;
+		// 	statt = ll->numberOfNeighboursStatistics();
+		// 	showVector(statt, 9);
+		// 	delete[] statt;
+		// 	usleep(250000);
+	}
+	auto finish2 = std::chrono::high_resolution_clock::now();
+	std::chrono::duration<double> elapsed2 = finish2 - start2;
+	std::cout << "Elapsed time: " << elapsed2.count() << " s\n";
+
+	double speedup = elapsed2.count() / elapsed.count();
+	double efficiency = 100.0 * speedup / 4;
+
+	std::cout << "Speed up: " << speedup << " Efficiency: " << efficiency << " %\n";
 
 	return 0;
 }

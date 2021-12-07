@@ -19,7 +19,6 @@ public:
 private:
 static const int MAX_THREAD_NUM = 6;
 
-int seed [MAX_THREAD_NUM];
 drand48_data buffer [MAX_THREAD_NUM];
 };
 
