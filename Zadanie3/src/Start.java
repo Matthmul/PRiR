@@ -1,10 +1,23 @@
 import java.net.MalformedURLException;
 import java.rmi.*;
-import java.util.*;
+import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
 import java.rmi.RemoteException;
+import java.rmi.server.UnicastRemoteObject;
+import java.util.*;
 import java.util.concurrent.*;
 
-public class Start implements PolygonalChain {
+public class Start {
+    public Start() throws RemoteException {
+        ServiceStart obj = new ServiceStart();
+        PolygonalChain stub = (PolygonalChain) UnicastRemoteObject.exportObject(obj, 0);
+        
+        Registry registry = LocateRegistry.getRegistry();
+        registry.rebind("POLYGONAL_CHAIN", stub);
+    }
+}
+
+class ServiceStart implements PolygonalChain {
     private Map<String, LinkedList<LinkedList<Position2D>>> lines = new LinkedHashMap<>();
     private Map<String, LinkedList<Position2D>> leftPoints = new LinkedHashMap<>();
     private Map<String, Integer> linesLength = new LinkedHashMap<>();
@@ -14,20 +27,11 @@ public class Start implements PolygonalChain {
     private ExecutorService executorService;
     private final Object sync = new Object();
 
-    public class DaemonThreadFactory implements ThreadFactory {
-
-        @Override
-        public Thread newThread(final Runnable r) {
-            Thread t = new Thread(r);
-            t.setDaemon(true);
-            return t;
-        }
-    }
-
-    public Start() throws RemoteException {
+    ServiceStart() {
         super();
         service = null;
         taskLimit = null;
+        executorService = null;
     }
 
     private class LineTask implements Callable<Boolean> {
@@ -89,44 +93,53 @@ public class Start implements PolygonalChain {
         synchronized (syncObj.get(name)) {
             LinkedList<Position2D> newList = new LinkedList<>();
             LinkedList<LinkedList<Position2D>> lineList = lines.get(name);
-            Integer found = null;
+            Integer found1 = null;
+            Integer found2 = null;
             if (!lineList.isEmpty()) {
-                int i = 0;
-                Iterator<LinkedList<Position2D>> l = lineList.iterator();
-                while (l.hasNext()) {
-                    LinkedList<Position2D> p = l.next(); // must be called before you can call i.remove()
-                    if (p.getFirst().equals(lastPoint)) {
-                        if (found == null) {
+                for (int i = 0; i < lineList.size(); ++i) {
+                    if (lineList.get(i).getFirst().equals(lastPoint)) {
+                        if (found1 == null) {
                             lineList.get(i).add(0, firstPoint);
-                            found = i;
+                            found2 = i;
                         } else {
-                            lineList.get(found).addAll(lineList.get(i));
-                            lineList.remove(found);
+                            lineList.get(found1).remove(lineList.get(found1).size() - 1);
+                            found2 = i;
+                            break;
                         }
                     }
 
-                    if (p.getLast().equals(firstPoint)) {
-                        if (found == null) {
-                            p.add(p.size(), lastPoint);
-                            found = i;
+                    if (lineList.get(i).getLast().equals(firstPoint)) {
+                        if (found2 == null) {
+                            lineList.get(i).add(lineList.get(i).size(), lastPoint);
+                            found1 = i;
                         } else {
-                            p.addAll(lineList.get(found));
-                            l.remove();
+                            lineList.get(found2).remove(0);
+                            found1 = i;
+                            break;
                         }
                     }
                 }
-                if (found == null) {
+                if (found1 == null && found2 == null) {
                     newList.add(firstPoint);
                     newList.add(lastPoint);
+                    lineList.add(newList);
+                } else if (found1 != null && found2 != null) {
+                    newList.addAll(lineList.get(found1));
+                    newList.addAll(lineList.get(found2));
+                    lineList.add(newList);
+                    if (found1 > found2) {
+                        lineList.remove((int) found1);
+                        lineList.remove((int) found2);
+                    } else {
+                        lineList.remove((int) found2);
+                        lineList.remove((int) found1);
+                    }
                 }
             } else {
                 newList.add(firstPoint);
                 newList.add(lastPoint);
-            }
-            if (!newList.isEmpty()) {
                 lineList.add(newList);
             }
-
 
             boolean f1 = false, f2 = false;
             List<Position2D> points = leftPoints.get(name);
@@ -164,7 +177,7 @@ public class Start implements PolygonalChain {
         if (executorService == null) {
             return null;
         }
-        if (!leftPoints.containsKey(name)) {
+        if (!linesLength.containsKey(name)) {
             return null;
         }
 
@@ -176,10 +189,20 @@ public class Start implements PolygonalChain {
     @Override
     public void setPolygonalChainProcessorName(String uri) throws RemoteException {
         try {
-            service = (PolygonalChainProcessor) Naming.lookup(uri + "/POLYGONAL_CHAIN");
+            service = (PolygonalChainProcessor) Naming.lookup(uri);
         } catch (NotBoundException | MalformedURLException ignored) {
         }
         taskLimit = service.getConcurrentTasksLimit();
         executorService = Executors.newFixedThreadPool(taskLimit, new DaemonThreadFactory());
+    }
+}
+
+class DaemonThreadFactory implements ThreadFactory {
+
+    @Override
+    public Thread newThread(final Runnable r) {
+        Thread t = new Thread(r);
+        t.setDaemon(true);
+        return t;
     }
 }

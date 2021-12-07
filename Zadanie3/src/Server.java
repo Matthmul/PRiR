@@ -19,7 +19,7 @@ public class Server extends UnicastRemoteObject implements PolygonalChainProcess
         int PORT = 1099;
         Registry registry = java.rmi.registry.LocateRegistry.createRegistry(PORT);
 
-        registry.rebind("POLYGONAL_CHAIN", new Server());
+        registry.rebind("POLYGONAL_CHAIN_SERVER", new Server());
         for (String service : registry.list()) {
             System.out.println("Service : " + service);
         }

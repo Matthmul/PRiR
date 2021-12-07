@@ -19,7 +19,7 @@ void LifeParallelImplementation::oneStep()
 	int neighbours;
 	int id;
 	double result;
-#pragma omp parallel private(neighbours, id, result) shared(age, cells, nextGeneration, buffer)
+#pragma omp parallel private(neighbours, id, result, buffer) shared(age, cells, nextGeneration)
 	{
 		id = omp_get_thread_num();
 #pragma omp for schedule(auto) collapse(2)
