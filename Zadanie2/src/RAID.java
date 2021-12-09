@@ -82,7 +82,9 @@ public class RAID implements RAIDInterface {
     }
 
     private class RebuildTask extends Thread {
-        public RebuildTask() {
+        private int diskNum;
+        public RebuildTask(int diskNum) {
+            this.diskNum = diskNum;
         }
 
         public void run() {
@@ -93,28 +95,29 @@ public class RAID implements RAIDInterface {
                 int num = 0;
                 int val = 0;
                 try {
-                    for (int j = 0; j <= disks.size(); ++j) {
-                        disksLock.get(j).lock();
-                    }
+                    disksLock.get(disks.size()).lock();
+
                     for (; num < disks.size(); ++num) {
                         if (broken.get(num)) {
                             continue;
                         }
                         try {
+                            disksLock.get(num).lock();
                             val += disks.get(num).read(i);
-                        } catch (DiskInterface.DiskError diskError) {
-                            state = RAIDState.DEGRADED;
-                            broken.set(num, Boolean.TRUE);
+                        } catch (DiskInterface.DiskError ignored) {
+                        } finally {
+                            disksLock.get(num).unlock();
                         }
                     }
-                    backupDisk.write(i, val);
+
+                    val = backupDisk.read(i) - val;
+                    disks.get(diskNum).write(i, val);
                 } catch (DiskInterface.DiskError ignored) {
                 } finally {
-                    for (int j = disks.size(); j >= 0; --j) {
-                        disksLock.get(j).unlock();
-                    }
+                    disksLock.get(disks.size()).unlock();
                 }
             }
+            broken.set(diskNum, false);
             state = RAIDState.NORMAL;
         }
     }
@@ -138,9 +141,8 @@ public class RAID implements RAIDInterface {
             ++diskNum;
         }
         disks.set(diskNum, disk);
-        broken.set(diskNum, false);
 
-        RebuildTask job = new RebuildTask();
+        RebuildTask job = new RebuildTask(diskNum);
         job.start();
     }
 
@@ -154,9 +156,8 @@ public class RAID implements RAIDInterface {
                 int num = 0;
                 int val = 0;
                 try {
-                    for (int i = 0; i <= disks.size(); ++i) {
-                        disksLock.get(i).lock();
-                    }
+                    disksLock.get(disks.size()).lock();
+                    disksLock.get(diskNum).lock();
                     for (; num < disks.size(); ++num) {
                         if (broken.get(num)) {
                             continue;
@@ -173,13 +174,13 @@ public class RAID implements RAIDInterface {
                     state = RAIDState.DEGRADED;
                     broken.set(disks.size(), Boolean.TRUE);
                 } finally {
-                    for (int i = disks.size(); i >= 0; --i) {
-                        disksLock.get(i).unlock();
-                    }
+                    disksLock.get(diskNum).unlock();
+                    disksLock.get(disks.size()).unlock();
                 }
             }
         } else {
             try {
+                disksLock.get(disks.size()).lock();
                 disksLock.get(diskNum).lock();
                 try {
                     old_val = disks.get(diskNum).read(diskSector);
@@ -192,19 +193,17 @@ public class RAID implements RAIDInterface {
                 }
                 if (!broken.get(disks.size())) {
                     try {
-                        disksLock.get(disks.size()).lock();
                         int tmp = backupDisk.read(diskSector);
                         tmp -= old_val;
                         backupDisk.write(diskSector, tmp + value);
                     } catch (DiskInterface.DiskError ignored) {
                         state = RAIDState.DEGRADED;
                         broken.set(broken.size() - 1, Boolean.TRUE);
-                    } finally {
-                        disksLock.get(disks.size()).unlock();
                     }
                 }
             } finally {
                 disksLock.get(diskNum).unlock();
+                disksLock.get(disks.size()).unlock();
             }
         }
     }
@@ -235,18 +234,20 @@ public class RAID implements RAIDInterface {
                 int num = 0;
                 int val = 0;
                 try {
-                    for (int i = 0; i <= disks.size(); ++i) {
-                        disksLock.get(i).lock();
-                    }
+                    disksLock.get(disks.size()).lock();
+                    disksLock.get(diskNum).lock();
                     for (; num < disks.size(); ++num) {
                         if (broken.get(num)) {
                             continue;
                         }
                         try {
+                            disksLock.get(num).lock();
                             val += disks.get(num).read(diskSector);
                         } catch (DiskInterface.DiskError diskError) {
                             state = RAIDState.DEGRADED;
                             broken.set(num, Boolean.TRUE);
+                        } finally {
+                            disksLock.get(num).unlock();
                         }
                     }
                     value = backupDisk.read(diskSector);
@@ -255,9 +256,8 @@ public class RAID implements RAIDInterface {
                     state = RAIDState.DEGRADED;
                     broken.set(disks.size(), Boolean.TRUE);
                 } finally {
-                    for (int i = disks.size(); i >= 0; --i) {
-                        disksLock.get(i).unlock();
-                    }
+                    disksLock.get(diskNum).unlock();
+                    disksLock.get(disks.size()).unlock();
                 }
             }
         } else {
@@ -267,7 +267,7 @@ public class RAID implements RAIDInterface {
             } catch (DiskInterface.DiskError diskError) {
                 state = RAIDState.DEGRADED;
                 broken.set(diskNum, Boolean.TRUE);
-                this.readTask(sector);
+                value = this.readTask(sector);
             } finally {
                 disksLock.get(diskNum).unlock();
             }

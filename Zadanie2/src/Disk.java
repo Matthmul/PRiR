@@ -2,7 +2,7 @@ import java.util.concurrent.atomic.AtomicIntegerArray;
 
 public class Disk implements DiskInterface {
     public AtomicIntegerArray value;
-    static private int SIZE = 100000000;
+    static public int SIZE = 100;
     private boolean broken = false;
 
     public Disk() {
