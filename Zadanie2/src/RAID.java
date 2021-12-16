@@ -6,7 +6,7 @@ public class RAID implements RAIDInterface {
     public ArrayList<DiskInterface> disks = new ArrayList<DiskInterface>();
     private ArrayList<Boolean> broken = new ArrayList<Boolean>();
     private ArrayList<ReentrantLock> disksLock = new ArrayList<ReentrantLock>();
-    private DiskInterface backupDisk;
+    public DiskInterface backupDisk;
     private int matrixSize;
     private int diskSize;
     public boolean isShutdown;
@@ -38,8 +38,7 @@ public class RAID implements RAIDInterface {
         disksLock.add(new ReentrantLock());
     }
 
-    private class InitTask extends Thread
-    {
+    private class InitTask extends Thread {
         public InitTask() {
         }
 
@@ -83,6 +82,7 @@ public class RAID implements RAIDInterface {
 
     private class RebuildTask extends Thread {
         private int diskNum;
+
         public RebuildTask(int diskNum) {
             this.diskNum = diskNum;
         }
@@ -109,9 +109,12 @@ public class RAID implements RAIDInterface {
                             disksLock.get(num).unlock();
                         }
                     }
-
-                    val = backupDisk.read(i) - val;
-                    disks.get(diskNum).write(i, val);
+                    if (diskNum == disks.size()) {
+                        backupDisk.write(i, val);
+                    } else {
+                        val = backupDisk.read(i) - val;
+                        disks.get(diskNum).write(i, val);
+                    }
                 } catch (DiskInterface.DiskError ignored) {
                 } finally {
                     disksLock.get(disks.size()).unlock();
@@ -140,7 +143,12 @@ public class RAID implements RAIDInterface {
             }
             ++diskNum;
         }
-        disks.set(diskNum, disk);
+
+        if (diskNum == disks.size()) {
+            backupDisk = disk;
+        } else {
+            disks.set(diskNum, disk);
+        }
 
         RebuildTask job = new RebuildTask(diskNum);
         job.start();
@@ -168,6 +176,9 @@ public class RAID implements RAIDInterface {
                             state = RAIDState.DEGRADED;
                             broken.set(num, Boolean.TRUE);
                         }
+                    }
+                    if (state == RAIDState.REBUILD) {
+                        disks.get(diskNum).write(diskSector, value);
                     }
                     backupDisk.write(diskSector, val + value);
                 } catch (DiskInterface.DiskError diskError) {

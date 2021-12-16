@@ -14,7 +14,7 @@ public class Main {
             for (int i = 1; i < 10; ++i) {
 //                System.out.println("pr id " + id + " " + raid.read(100 * id));
                 raid.read(Disk.SIZE * id);
-//                raid.write(Disk.SIZE * id, 10 + id + i);
+                raid.write(Disk.SIZE * (id + 1) - 1, 10 + id);
                 int val = raid.read(Disk.SIZE * id);
 //                if (val != 10 + id + i && !raid.isShutdown) {
 //                    System.out.println("In val " + val + " " + (10 + id + i) + " " + id);
@@ -63,7 +63,8 @@ public class Main {
         Runnable[] runners = new Runnable[jobNum];
         Thread[] threads = new Thread[jobNum];
         Disk d = (Disk) raid.disks.get(0);
-        Disk d2 = (Disk) raid.disks.get(2);
+        Disk d2 = (Disk) raid.disks.get(3);
+        Disk bd = (Disk) raid.backupDisk;
         Disk newD = new Disk();
 //        for (int i = 0; i < newD.size(); ++i) {
 //            try {
@@ -76,15 +77,17 @@ public class Main {
                 break;
             try {
                 Thread.sleep(10);
-            } catch (InterruptedException e) {
+            } catch (InterruptedException ignored) {
             }
         }
         System.out.println(raid.getState());
         d2.destroy();
-        raid.read(0);
-        raid.read(10);
-        raid.read(200);
-        raid.read(300);
+//        bd.destroy();
+        raid.read(Disk.SIZE * 3);
+//        raid.read(10);
+//        raid.read(200);
+//        raid.read(300);
+//        raid.write(300, 3);
 //        System.out.println(raid.getState());
         raid.replaceDisk(newD);
         System.out.println(raid.getState());
@@ -117,8 +120,8 @@ public class Main {
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
-            if (raid.getBackup(0) != 105) {
-                System.out.println("Back " + raid.getBackup(0));
+            if (raid.getBackup(0) != 10) {
+                System.out.println("Back " + raid.getBackup(Disk.SIZE - 1));
             }
             d2.destroy();
         }

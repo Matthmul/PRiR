@@ -8,8 +8,8 @@ LifeParallelImplementation::LifeParallelImplementation()
 #pragma omp parallel private(id) shared(buffer)
 	{
 		id = omp_get_thread_num();
-		srand48_r(0, &buffer[id]);
-		// srand48_r(time(0)*(1+id), &buffer[id]);
+		// srand48_r(0, &buffer[id]);
+		srand48_r(time(0)*(1+id), &buffer[id]);
 	}
 }
 

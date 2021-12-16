@@ -44,8 +44,8 @@ void glider(Life *l, int col, int row)
 
 int main(int argc, char **argv)
 {
-	const int SIZE = 10000;
-	const int N = 1;
+	const int SIZE = 3000;
+	const int N = 10;
 
 	// Life *l = new LifeSequentialImplementation();
 	Life *l = new LifeParallelImplementation();
@@ -101,8 +101,8 @@ int main(int argc, char **argv)
 		ll->maxSumOfNeighboursAge();
 		ll->numberOfNeighboursStatistics();
 
-		// 	showTable(ll->getCurrentState(), SIZE);
-		// 	cout << ll->avgNumerOfLiveNeighboursOfLiveCell() << ", " << ll->maxSumOfNeighboursAge() << endl;
+			// showTable(ll->getCurrentState(), SIZE);
+			// cout << ll->avgNumerOfLiveNeighboursOfLiveCell() << ", " << ll->maxSumOfNeighboursAge() << endl;
 		// 	statt = ll->numberOfNeighboursStatistics();
 		// 	showVector(statt, 9);
 		// 	delete[] statt;
@@ -113,7 +113,7 @@ int main(int argc, char **argv)
 	std::cout << "Elapsed time: " << elapsed2.count() << " s\n";
 
 	double speedup = elapsed2.count() / elapsed.count();
-	double efficiency = 100.0 * speedup / 4;
+	double efficiency = 100.0 * speedup / omp_get_max_threads();
 
 	std::cout << "Speed up: " << speedup << " Efficiency: " << efficiency << " %\n";
 
